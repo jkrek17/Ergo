@@ -1,0 +1,28 @@
+ergo {
+    node {
+        mining = false
+        extraIndex = {{ENABLE_EXTRA_INDEX}}
+
+        utxo {
+            utxoBootstrap = {{ENABLE_LITE_NODE}}
+            storingUtxoSnapshots = 2
+            p2pUtxoSnapshots = 2
+        }
+        nipopow {
+            nipopowBootstrap = {{ENABLE_LITE_NODE}}
+            p2pNipopows = 2
+        }
+    }
+}
+scorex {
+    restApi {
+        publicUrl = "http://{{PUBLIC_IP}}:9053"
+        apiKeyHash = "{{API_KEY_HASH}}"
+    }
+    network {
+        declaredAddress = "{{PUBLIC_IP}}:9030"
+        nodeName = "{{NODE_NAME}}"
+    }
+}
+
+dataDir = "{{DATA_DIR}}"
