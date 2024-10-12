@@ -51,13 +51,14 @@ docker build -t ergo-node .
 
 ## Running the Ergo Node
 
-To start the Ergo node:
+To start the Ergo node with automatic restart on system boot:
 
 ```bash
-docker run --env-file .env -d -p 9030:9030 -p 9053:9053 -v /path/to/ergo/data:/var/lib/ergo --name ergo-node ergo-node
+docker run --env-file .env -d -p 9030:9030 -p 9053:9053 -v /path/to/ergo/data:/var/lib/ergo --name ergo-node --restart unless-stopped ergo-node
 ```
 
-Note: Replace `/path/to/ergo/data` with the actual path where you want to store the Ergo blockchain data on your host machine.
+Note: Replace /path/to/ergo/data with the actual path where you want to store the Ergo blockchain data on your host machine. This path should exist on your host system before running the command. If it doesn't exist, create it first using mkdir -p /path/to/ergo/data.
+The --restart unless-stopped flag ensures that the container will automatically restart when the Docker daemon starts, typically on system boot, unless it was explicitly stopped.
 
 ## Managing the Node
 
