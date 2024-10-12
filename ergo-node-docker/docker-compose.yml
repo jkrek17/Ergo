@@ -1,0 +1,22 @@
+services:
+  ergo-node:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ergo-node
+    container_name: ergo-node
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - JAVA_OPTS=${JAVA_OPTS:-"-Xmx4g"}
+      - ENABLE_LITE_NODE=${ENABLE_LITE_NODE:-false}
+      - ENABLE_EXTRA_INDEX=${ENABLE_EXTRA_INDEX:-false}
+    ports:
+      - "9030:9030"
+      - "9053:9053"
+    volumes:
+      - ${ERGO_DATA_DIR:-/var/lib/ergo}:/var/lib/ergo
+
+volumes:
+  ergo-data:
+    driver: local
