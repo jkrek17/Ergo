@@ -1,117 +1,213 @@
 # Ergo Node Docker Setup
 
-This repository contains Docker configuration for running an Ergo node using Docker Compose. Follow these instructions to build, run, and manage your Ergo node.
+This repository contains Docker configuration files to run an Ergo Node. It provides a streamlined way to set up and run an Ergo node using Docker containers with persistent blockchain data.
 
 ## Prerequisites
 
-- Docker and Docker Compose installed on your system
-- Git installed on your system
-- Basic knowledge of Docker, Docker Compose, and command-line operations
+- Docker
+- Docker Compose
+- Git (for cloning this repository)
+- At least 4GB of RAM
+- At least 50GB of free disk space
 
 ## Quick Start
 
 1. Clone this repository:
-   ```
-   git clone https://github.com/jkrek17/Ergo.git
-   cd Ergo
-   ```
+```bash
+git clone https://github.com/your-username/ergo-node-docker.git
+cd ergo-node-docker
+```
 
-2. Configure the `.env` file
-3. Ensure the Docker Compose file is named `docker-compose.yml`
-4. Run the Ergo node using Docker Compose
+2. Copy the example environment file and edit it with your settings:
+```bash
+cp .env.example .env
+```
+
+3. Edit the `.env` file with your preferred settings:
+```
+VERSION=5.0.24                                    # Ergo node version
+NODE_NAME='YOUR NODE NAME HERE - NO QUOTES'       # Your node name
+API_KEY_PASSWORD='YOUR PASSWORD HERE - NO QUOTES' # API key password
+JAVA_OPTS=-Xmx4g                                 # Java memory options
+ENABLE_LITE_NODE=false                           # Enable/disable lite node
+ENABLE_EXTRA_INDEX=false                         # Enable/disable extra indexing
+```
+
+4. Build and start the node:
+```bash
+docker-compose up -d
+```
 
 ## Configuration
 
-Before running the node, configure the following files:
+### Environment Variables
 
-### .env
+- `VERSION`: Ergo node version to use
+- `NODE_NAME`: Name of your node (visible to other peers)
+- `API_KEY_PASSWORD`: Password for API access
+- `JAVA_OPTS`: Java VM options (default: `-Xmx4g`)
+- `ENABLE_LITE_NODE`: Enable lite node mode (default: `false`)
+- `ENABLE_EXTRA_INDEX`: Enable extra indexing (default: `false`)
 
-Edit the `.env` file and set the following variables:
+### Ports
 
-- `NODE_NAME`: A unique name for your node (e.g., MyErgoNode)
-- `API_KEY_PASSWORD`: A secure password for API access
-- `ERGO_DATA_DIR`: The path on your host machine where you want to store the Ergo blockchain data (e.g., /path/to/ergo/data)
+The node exposes the following ports:
+- `9030`: P2P network port
+- `9053`: REST API port
 
-Optional variables (will use defaults if not set):
-- `JAVA_OPTS`: Java options for the Ergo node (default: "-Xmx4g")
-- `ENABLE_LITE_NODE`: Set to true for lite node mode (default: false)
-- `ENABLE_EXTRA_INDEX`: Set to true to enable extra indexing (default: false)
+### Persistent Storage
 
-Example:
+The node uses a named Docker volume `ergo-data` to store the blockchain data. This ensures:
+- Data persists across container restarts and rebuilds
+- No need to resync the blockchain if the container is recreated
+- Easy backup and restore procedures
+- Optimal performance for database operations
+
+## Directory Structure
+
 ```
-NODE_NAME=MyErgoNode
-API_KEY_PASSWORD=your_secure_password_here
-ERGO_DATA_DIR=/c/Docker/ergo-data
-JAVA_OPTS=-Xmx8g
-ENABLE_LITE_NODE=false
-ENABLE_EXTRA_INDEX=false
+.
+├── .env                    # Environment configuration
+├── docker-compose.yml      # Docker Compose configuration
+├── Dockerfile             # Docker image definition
+├── entrypoint.sh          # Container entrypoint script
+├── ergo.conf.template     # Ergo node configuration template
+└── README.md             # This file
 ```
 
-Note: Ensure that the directory specified in `ERGO_DATA_DIR` exists on your host system before running the Docker Compose command. If it doesn't exist, create it first using `mkdir -p /path/to/ergo/data`.
+## Usage
 
-### docker-compose.yml
-
-The `docker-compose.yml` file is pre-configured to use the variables from your `.env` file. You shouldn't need to modify this file unless you want to make advanced changes to your setup.
-
-### ergo.conf.template
-
-This file contains the configuration for your Ergo node. The placeholders will be replaced with actual values when the container starts.
-
-## Running the Ergo Node
-
-To start the Ergo node:
+### Starting the Node
 
 ```bash
 docker-compose up -d
 ```
 
-This command will build the Docker image if it doesn't exist and start the container in detached mode.
+### Viewing Logs
 
-## Managing the Node
+```bash
+docker-compose logs -f
+```
 
-### Stop the Node
+### Stopping the Node
 
 ```bash
 docker-compose down
+# Note: Do NOT use 'docker-compose down -v' as it will delete your blockchain data
 ```
 
-### Restart the Node
+### Updating the Node
 
-```bash
-docker-compose restart
-```
-
-### View Node Logs
-
-```bash
-docker-compose logs
-```
-
-### Remove the Container and Volume
-
-If you need to remove the container and its associated volume:
-
-```bash
-docker-compose down -v
-```
-
-## Updating Ergo Version
-
-1. Update the `ERGO_VERSION` in the Dockerfile
+1. Update the VERSION in your `.env` file
 2. Rebuild and restart the container:
-   ```bash
-   docker-compose up -d --build
-   ```
+```bash
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
+```
+
+## Data Management
+
+### Volume Information
+```bash
+# List volumes
+docker volume ls
+
+# Inspect volume
+docker volume inspect ergo-data
+
+# Check volume size
+docker system df -v | grep ergo-data
+```
+
+### Backup Procedure
+
+```bash
+# Stop the container first
+docker-compose down
+
+# Create backup
+docker run --rm -v ergo-data:/source -v $(pwd):/backup alpine tar czf /backup/ergo-data-backup.tar.gz -C /source .
+```
+
+### Restore Procedure
+
+```bash
+# Stop the container first
+docker-compose down
+
+# Restore from backup
+docker run --rm -v ergo-data:/target -v $(pwd):/backup alpine sh -c "cd /target && tar xzf /backup/ergo-data-backup.tar.gz"
+```
+
+### Delete Data (Caution!)
+```bash
+# This will delete all blockchain data - you'll need to resync!
+docker volume rm ergo-data
+```
+
+## Maintenance
+
+### Regular Maintenance Tasks
+
+1. Monitor disk space usage:
+```bash
+docker system df -v
+```
+
+2. Check logs for errors:
+```bash
+docker-compose logs --tail=100
+```
+
+3. Keep your node version updated
+4. Regularly backup your data volume
+
+### Monitoring
+
+You can monitor your node's status through:
+- Docker logs: `docker-compose logs -f`
+- Ergo node API: `http://localhost:9053/info`
+
+## Security Considerations
+
+- Change the default API key password in the `.env` file
+- Don't expose the API port (9053) to the public internet
+- Keep your node updated to the latest version
+- Regularly check the [official Ergo documentation](https://docs.ergoplatform.com/) for security updates
 
 ## Troubleshooting
 
-If you encounter issues:
-1. Check the node logs using the `docker-compose logs` command
-2. Ensure all ports are correctly mapped and not in use by other services
-3. Verify that the data directory has the correct permissions
+### Common Issues
+
+1. **Container fails to start**
+   - Check logs: `docker-compose logs`
+   - Verify environment variables in `.env`
+   - Ensure Docker has enough disk space
+
+2. **Node not syncing**
+   - Check network connectivity
+   - Verify ports 9030 and 9053 are accessible
+   - Check available disk space: `docker system df`
+
+3. **Out of memory**
+   - Adjust `JAVA_OPTS` in `.env` file
+   - Ensure host has enough free memory
+
+4. **Volume Issues**
+   - Check volume exists: `docker volume ls`
+   - Inspect volume: `docker volume inspect ergo-data`
+   - Verify volume permissions
 
 ## Contributing
 
-Thanks to ccgarant for introducing me to nodes and guiding my work. 
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-Contributions to improve this setup are welcome. Please submit a pull request or open an issue for any enhancements.
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- [Ergo Platform](https://ergoplatform.org/)
+- [Ergo Node Documentation](https://docs.ergoplatform.com/node/)
