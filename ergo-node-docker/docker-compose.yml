@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        VERSION: ${VERSION}
     image: ergo-node
     container_name: ergo-node
     restart: unless-stopped
