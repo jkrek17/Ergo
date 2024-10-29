@@ -17,8 +17,8 @@ services:
       - "9030:9030"
       - "9053:9053"
     volumes:
-      - ${ERGO_DATA_DIR:-/var/lib/ergo}:/var/lib/ergo
+      - ergo-data:/var/lib/ergo    
 
 volumes:
-  ergo-data:
+  ergo-data:    
     driver: local

@@ -1,6 +1,6 @@
 # Ergo Node Docker Setup
 
-This repository contains Docker configuration files to run an Ergo Node. It provides a streamlined way to set up and run an Ergo node using Docker containers.
+This repository contains Docker configuration files to run an Ergo Node. It provides a streamlined way to set up and run an Ergo node using Docker containers with persistent blockchain data.
 
 ## Prerequisites
 
@@ -28,7 +28,6 @@ cp .env.example .env
 VERSION=5.0.24                                    # Ergo node version
 NODE_NAME='YOUR NODE NAME HERE - NO QUOTES'       # Your node name
 API_KEY_PASSWORD='YOUR PASSWORD HERE - NO QUOTES' # API key password
-ERGO_DATA_DIR='/path/to/your/data/directory'     # Data directory path
 JAVA_OPTS=-Xmx4g                                 # Java memory options
 ENABLE_LITE_NODE=false                           # Enable/disable lite node
 ENABLE_EXTRA_INDEX=false                         # Enable/disable extra indexing
@@ -46,7 +45,6 @@ docker-compose up -d
 - `VERSION`: Ergo node version to use
 - `NODE_NAME`: Name of your node (visible to other peers)
 - `API_KEY_PASSWORD`: Password for API access
-- `ERGO_DATA_DIR`: Directory to store blockchain data
 - `JAVA_OPTS`: Java VM options (default: `-Xmx4g`)
 - `ENABLE_LITE_NODE`: Enable lite node mode (default: `false`)
 - `ENABLE_EXTRA_INDEX`: Enable extra indexing (default: `false`)
@@ -56,6 +54,14 @@ docker-compose up -d
 The node exposes the following ports:
 - `9030`: P2P network port
 - `9053`: REST API port
+
+### Persistent Storage
+
+The node uses a named Docker volume `ergo-data` to store the blockchain data. This ensures:
+- Data persists across container restarts and rebuilds
+- No need to resync the blockchain if the container is recreated
+- Easy backup and restore procedures
+- Optimal performance for database operations
 
 ## Directory Structure
 
@@ -87,6 +93,7 @@ docker-compose logs -f
 
 ```bash
 docker-compose down
+# Note: Do NOT use 'docker-compose down -v' as it will delete your blockchain data
 ```
 
 ### Updating the Node
@@ -99,15 +106,62 @@ docker-compose build --no-cache
 docker-compose up -d
 ```
 
-## Data Directory
+## Data Management
 
-The blockchain data is stored in the directory specified by `ERGO_DATA_DIR` in your `.env` file. Make sure this directory has enough space and appropriate permissions.
+### Volume Information
+```bash
+# List volumes
+docker volume ls
+
+# Inspect volume
+docker volume inspect ergo-data
+
+# Check volume size
+docker system df -v | grep ergo-data
+```
+
+### Backup Procedure
+
+```bash
+# Stop the container first
+docker-compose down
+
+# Create backup
+docker run --rm -v ergo-data:/source -v $(pwd):/backup alpine tar czf /backup/ergo-data-backup.tar.gz -C /source .
+```
+
+### Restore Procedure
+
+```bash
+# Stop the container first
+docker-compose down
+
+# Restore from backup
+docker run --rm -v ergo-data:/target -v $(pwd):/backup alpine sh -c "cd /target && tar xzf /backup/ergo-data-backup.tar.gz"
+```
+
+### Delete Data (Caution!)
+```bash
+# This will delete all blockchain data - you'll need to resync!
+docker volume rm ergo-data
+```
 
 ## Maintenance
 
-### Backup
+### Regular Maintenance Tasks
 
-The important data is stored in your `ERGO_DATA_DIR`. Back up this directory regularly.
+1. Monitor disk space usage:
+```bash
+docker system df -v
+```
+
+2. Check logs for errors:
+```bash
+docker-compose logs --tail=100
+```
+
+3. Keep your node version updated
+4. Regularly backup your data volume
 
 ### Monitoring
 
@@ -129,16 +183,21 @@ You can monitor your node's status through:
 1. **Container fails to start**
    - Check logs: `docker-compose logs`
    - Verify environment variables in `.env`
-   - Ensure data directory permissions are correct
+   - Ensure Docker has enough disk space
 
 2. **Node not syncing**
    - Check network connectivity
    - Verify ports 9030 and 9053 are accessible
-   - Check disk space in data directory
+   - Check available disk space: `docker system df`
 
 3. **Out of memory**
    - Adjust `JAVA_OPTS` in `.env` file
    - Ensure host has enough free memory
+
+4. **Volume Issues**
+   - Check volume exists: `docker volume ls`
+   - Inspect volume: `docker volume inspect ergo-data`
+   - Verify volume permissions
 
 ## Contributing
 
